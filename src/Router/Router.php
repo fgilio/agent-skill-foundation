@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace Fgilio\AgentSkillFoundation\Router;
 
 use Illuminate\Console\Command;
-use Symfony\Component\Console\Input\ArgvInput;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Input\InputOption;
 
 /**
  * Command router with lenient parsing for CLI skills.
@@ -26,10 +22,8 @@ class Router
     /** @var callable|null */
     private $unknownCallback = null;
 
-    private ?InputDefinition $definition = null;
-
     /**
-     * Define routes as command => handler array.
+     * Define routes as subcommand => handler array.
      * Each handler: callable(ParsedInput $p, Command $ctx): int
      */
     public function routes(array $routes): self
@@ -51,22 +45,12 @@ class Router
     }
 
     /**
-     * Define unknown command callback.
-     * Signature: callable(?string $command, Command $ctx): int
+     * Define unknown subcommand callback.
+     * Signature: callable(ParsedInput $p, Command $ctx): int
      */
     public function unknown(callable $callback): self
     {
         $this->unknownCallback = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Define custom input definition for complex options.
-     */
-    public function definition(InputDefinition $definition): self
-    {
-        $this->definition = $definition;
 
         return $this;
     }
@@ -82,7 +66,7 @@ class Router
     }
 
     /**
-     * Run with pre-parsed input (for nested routers).
+     * Run with pre-parsed input (for nested routers or analytics).
      */
     public function runWith(ParsedInput $parsed, Command $context): int
     {
@@ -111,16 +95,7 @@ class Router
             array_splice($rawArgv, 1, 1);
         }
 
-        // Extract positional args only (filter out options for ArgvInput)
-        $positionals = array_values(array_filter($rawArgv, fn ($arg, $i) => $i === 0 || ! str_starts_with($arg, '-'), ARRAY_FILTER_USE_BOTH
-        ));
-
-        // Create ArgvInput with positionals only (never throws on options)
-        $definition = $this->definition ?? $this->lenientDefinition();
-        $input = new ArgvInput($positionals, $definition);
-
-        // Pass full rawArgv for scanOption() to work
-        return new ParsedInput($input, $rawArgv);
+        return ParsedInput::fromArgv($rawArgv);
     }
 
     /**
@@ -144,12 +119,12 @@ class Router
      */
     private function dispatch(ParsedInput $parsed, Command $context): int
     {
-        $command = $parsed->command();
+        $subcommand = $parsed->subcommand();
 
-        // Help requested
-        if ($parsed->wantsHelp()) {
-            if ($command && $command !== 'help' && isset($this->routes[$command])) {
-                return $this->showCommandHelp($context, $command);
+        // Help requested or no subcommand
+        if ($parsed->wantsHelp() || $subcommand === null) {
+            if ($subcommand && $subcommand !== 'help' && isset($this->routes[$subcommand])) {
+                return $this->showSubcommandHelp($context, $subcommand);
             }
 
             return $this->helpCallback
@@ -158,33 +133,20 @@ class Router
         }
 
         // Route to handler
-        if ($command && isset($this->routes[$command])) {
-            return $this->routes[$command]($parsed, $context);
+        if (isset($this->routes[$subcommand])) {
+            return $this->routes[$subcommand]($parsed, $context);
         }
 
-        // Unknown command
+        // Unknown subcommand
         return $this->unknownCallback
-            ? ($this->unknownCallback)($command, $context)
-            : $this->defaultUnknown($context, $command);
-    }
-
-    /**
-     * Lenient definition - only capture command + args + help.
-     * Other options scanned manually via ParsedInput::scanOption().
-     */
-    private function lenientDefinition(): InputDefinition
-    {
-        return new InputDefinition([
-            new InputArgument('command', InputArgument::OPTIONAL),
-            new InputArgument('args', InputArgument::IS_ARRAY | InputArgument::OPTIONAL),
-            new InputOption('help', 'h', InputOption::VALUE_NONE),
-        ]);
+            ? ($this->unknownCallback)($parsed, $context)
+            : $this->defaultUnknown($context, $parsed);
     }
 
     private function defaultHelp(Command $context): int
     {
-        fwrite(STDERR, "Usage: <command> [options]\n\n");
-        fwrite(STDERR, "Available commands:\n");
+        fwrite(STDERR, "Usage: <subcommand> [args...] [options...]\n\n");
+        fwrite(STDERR, "Available subcommands:\n");
         foreach (array_keys($this->routes) as $cmd) {
             fwrite(STDERR, "  {$cmd}\n");
         }
@@ -192,18 +154,19 @@ class Router
         return Command::SUCCESS;
     }
 
-    private function defaultUnknown(Command $context, ?string $command): int
+    private function defaultUnknown(Command $context, ParsedInput $parsed): int
     {
-        fwrite(STDERR, "Unknown command: {$command}\n\n");
-        fwrite(STDERR, "Run with \"help\" to see available commands.\n");
+        $subcommand = $parsed->subcommand();
+        fwrite(STDERR, "Unknown subcommand: {$subcommand}\n\n");
+        fwrite(STDERR, "Run with --help to see available subcommands.\n");
 
         return Command::FAILURE;
     }
 
-    private function showCommandHelp(Command $context, string $command): int
+    private function showSubcommandHelp(Command $context, string $subcommand): int
     {
         return $this->helpCallback
-            ? ($this->helpCallback)($context, $command)
+            ? ($this->helpCallback)($context, $subcommand)
             : $this->defaultHelp($context);
     }
 }

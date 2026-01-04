@@ -4,51 +4,73 @@ declare(strict_types=1);
 
 namespace Fgilio\AgentSkillFoundation\Router;
 
-use Symfony\Component\Console\Input\ArgvInput;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Input\InputOption;
-
 /**
  * Value object for parsed CLI input with lenient option scanning.
+ *
+ * Contract: `<subcommand> [args...] [options...]`
+ * - Args must come before options
+ * - Options are scanned from raw argv via scanOption()/hasFlag()
  */
 class ParsedInput
 {
-    public function __construct(
-        private ArgvInput $input,
-        private array $rawArgv
+    private function __construct(
+        private array $rawArgv,
+        private ?string $subcommand,
+        private array $args
     ) {}
 
     /**
-     * Get the command name (first positional arg).
+     * Parse argv into a ParsedInput instance.
+     *
+     * Extracts subcommand and positional args (stopping at first option).
+     * Options are accessed via scanOption()/hasFlag() from raw argv.
      */
-    public function command(): ?string
+    public static function fromArgv(array $argv): self
     {
-        return $this->input->getArgument('command');
+        // Skip binary name (argv[0])
+        $tokens = array_slice($argv, 1);
+
+        $subcommand = null;
+        $args = [];
+
+        foreach ($tokens as $token) {
+            // Stop collecting positionals at first option
+            if (str_starts_with($token, '-')) {
+                break;
+            }
+
+            if ($subcommand === null) {
+                $subcommand = $token;
+            } else {
+                $args[] = $token;
+            }
+        }
+
+        return new self($argv, $subcommand, $args);
     }
 
     /**
-     * Alias for command() - improves readability.
+     * Get the subcommand name (first positional arg).
      */
-    public function firstArg(): ?string
+    public function subcommand(): ?string
     {
-        return $this->command();
+        return $this->subcommand;
     }
 
     /**
-     * Get remaining positional args after command.
+     * Get positional args after subcommand (before any options).
      */
     public function args(): array
     {
-        return $this->input->getArgument('args') ?? [];
+        return $this->args;
     }
 
     /**
-     * Alias for args() - improves readability.
+     * Alias for args() - improves readability in some contexts.
      */
     public function remainingArgs(): array
     {
-        return $this->args();
+        return $this->args;
     }
 
     /**
@@ -56,7 +78,7 @@ class ParsedInput
      */
     public function arg(int $index, mixed $default = null): mixed
     {
-        return $this->args()[$index] ?? $default;
+        return $this->args[$index] ?? $default;
     }
 
     /**
@@ -121,7 +143,7 @@ class ParsedInput
      */
     public function wantsHelp(): bool
     {
-        return $this->hasFlag('help', 'h') || $this->command() === 'help';
+        return $this->hasFlag('help', 'h') || $this->subcommand === 'help';
     }
 
     /**
@@ -166,14 +188,6 @@ class ParsedInput
     }
 
     /**
-     * Get the underlying Symfony input.
-     */
-    public function symfonyInput(): ArgvInput
-    {
-        return $this->input;
-    }
-
-    /**
      * Get raw argv array.
      */
     public function rawArgv(): array
@@ -182,41 +196,30 @@ class ParsedInput
     }
 
     /**
-     * Shift N tokens from the front (for nested routing).
-     * Keeps argv[0] (binary name), removes next N positional args.
+     * Shift N positional tokens from the front (for nested routing).
+     *
+     * Removes the current subcommand and optionally N-1 args,
+     * making the next positional become the new subcommand.
      */
     public function shift(int $n = 1): self
     {
-        $newArgv = $this->rawArgv;
+        // Build new argv: keep binary name, remove N positionals, keep options
+        $newArgv = [$this->rawArgv[0]];
 
-        // Find and remove N positional args (not options)
-        $removed = 0;
-        $i = 1;
-        while ($removed < $n && $i < count($newArgv)) {
-            if (! str_starts_with($newArgv[$i], '-')) {
-                array_splice($newArgv, $i, 1);
-                $removed++;
+        $skipped = 0;
+        foreach (array_slice($this->rawArgv, 1) as $token) {
+            if (str_starts_with($token, '-')) {
+                // Options always preserved
+                $newArgv[] = $token;
+            } elseif ($skipped < $n) {
+                // Skip this positional
+                $skipped++;
             } else {
-                // Skip option and its value if present
-                $i++;
-                if ($i < count($newArgv) && ! str_starts_with($newArgv[$i], '-')) {
-                    $i++;
-                }
+                // Keep remaining positionals
+                $newArgv[] = $token;
             }
         }
 
-        // Re-create ArgvInput with shifted positionals
-        $positionals = array_values(array_filter($newArgv, fn ($arg, $i) => $i === 0 || ! str_starts_with($arg, '-'), ARRAY_FILTER_USE_BOTH
-        ));
-
-        $definition = new InputDefinition([
-            new InputArgument('command', InputArgument::OPTIONAL),
-            new InputArgument('args', InputArgument::IS_ARRAY | InputArgument::OPTIONAL),
-            new InputOption('help', 'h', InputOption::VALUE_NONE),
-        ]);
-
-        $input = new ArgvInput($positionals, $definition);
-
-        return new self($input, $newArgv);
+        return self::fromArgv($newArgv);
     }
 }

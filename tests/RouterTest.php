@@ -15,7 +15,7 @@ describe('Router', function () {
         $result = $router
             ->routes(['test' => fn () => 0])
             ->help(fn () => 0)
-            ->unknown(fn () => 1);
+            ->unknown(fn (ParsedInput $p) => 1);
 
         expect($result)->toBeInstanceOf(Router::class);
     });
@@ -74,13 +74,13 @@ describe('Router::runWith()', function () {
     it('calls unknown handler for missing routes', function () {
         $router = new Router();
         $unknownCalled = false;
-        $unknownCommand = null;
+        $receivedParsed = null;
 
         $router
             ->routes(['existing' => fn () => 0])
-            ->unknown(function (?string $cmd) use (&$unknownCalled, &$unknownCommand) {
+            ->unknown(function (ParsedInput $p) use (&$unknownCalled, &$receivedParsed) {
                 $unknownCalled = true;
-                $unknownCommand = $cmd;
+                $receivedParsed = $p;
 
                 return 1;
             });
@@ -93,7 +93,7 @@ describe('Router::runWith()', function () {
         $result = $router->runWith($parsed, $command);
 
         expect($unknownCalled)->toBe(true);
-        expect($unknownCommand)->toBe('nonexistent');
+        expect($receivedParsed->subcommand())->toBe('nonexistent');
         expect($result)->toBe(1);
     });
 
@@ -117,5 +117,49 @@ describe('Router::runWith()', function () {
         $router->runWith($parsed, $command);
 
         expect($helpCalled)->toBe(true);
+    });
+
+    it('calls help handler when no subcommand', function () {
+        $router = new Router();
+        $helpCalled = false;
+
+        $router
+            ->routes(['test' => fn () => 0])
+            ->help(function () use (&$helpCalled) {
+                $helpCalled = true;
+
+                return 0;
+            });
+
+        $command = new class extends \Illuminate\Console\Command {
+            protected $name = 'test';
+        };
+        $parsed = $this->createParsedInput([]);
+
+        $router->runWith($parsed, $command);
+
+        expect($helpCalled)->toBe(true);
+    });
+
+    it('passes ParsedInput to unknown handler for JSON detection', function () {
+        $router = new Router();
+        $wantsJson = false;
+
+        $router
+            ->routes(['existing' => fn () => 0])
+            ->unknown(function (ParsedInput $p) use (&$wantsJson) {
+                $wantsJson = $p->wantsJson();
+
+                return 1;
+            });
+
+        $command = new class extends \Illuminate\Console\Command {
+            protected $name = 'test';
+        };
+        $parsed = $this->createParsedInput(['nonexistent', '--json']);
+
+        $router->runWith($parsed, $command);
+
+        expect($wantsJson)->toBe(true);
     });
 });

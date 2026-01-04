@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace Fgilio\AgentSkillFoundation\Testing;
 
 use Fgilio\AgentSkillFoundation\Router\ParsedInput;
-use Symfony\Component\Console\Input\ArgvInput;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Input\InputOption;
 
 /**
  * Test helpers for CLI commands.
@@ -28,19 +24,7 @@ trait TestsCommands
             array_unshift($argv, 'app');
         }
 
-        // Extract positionals
-        $positionals = array_values(array_filter($argv, fn ($arg, $i) => $i === 0 || ! str_starts_with($arg, '-'), ARRAY_FILTER_USE_BOTH
-        ));
-
-        $definition = new InputDefinition([
-            new InputArgument('command', InputArgument::OPTIONAL),
-            new InputArgument('args', InputArgument::IS_ARRAY | InputArgument::OPTIONAL),
-            new InputOption('help', 'h', InputOption::VALUE_NONE),
-        ]);
-
-        $input = new ArgvInput($positionals, $definition);
-
-        return new ParsedInput($input, $argv);
+        return ParsedInput::fromArgv($argv);
     }
 
     /**

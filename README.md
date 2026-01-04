@@ -42,7 +42,7 @@ class DefaultCommand extends Command
                 'show' => fn(ParsedInput $p, Command $ctx) => $this->show($p),
             ])
             ->help(fn(Command $ctx) => $this->showHelp())
-            ->unknown(fn(?string $cmd) => $this->unknownCommand($cmd))
+            ->unknown(fn(ParsedInput $p, Command $ctx) => $this->unknownSubcommand($p))
             ->run($this);
     }
 
@@ -55,15 +55,39 @@ class DefaultCommand extends Command
         // ... search logic
         return self::SUCCESS;
     }
+
+    private function unknownSubcommand(ParsedInput $p): int
+    {
+        $subcommand = $p->subcommand();
+        if ($p->wantsJson()) {
+            fwrite(STDERR, json_encode(['error' => "Unknown: {$subcommand}"]));
+        } else {
+            $this->error("Unknown subcommand: {$subcommand}");
+        }
+        return self::FAILURE;
+    }
 }
 ```
+
+## CLI Contract
+
+ParsedInput enforces `<subcommand> [args...] [options...]`:
+
+- **Subcommand** comes first (e.g., `search`)
+- **Args** follow the subcommand (e.g., `search foo bar`)
+- **Options** come last (e.g., `search foo --limit=10 --json`)
+
+Args stop at the first option token. This prevents option values from leaking into args.
 
 ## Lenient Parsing
 
 ParsedInput scans raw argv directly, supporting options that aren't pre-declared:
 
 ```php
-$p->scanOption('limit', 'l');     // --limit=10, --limit 10, -l 10, -l=10
+$p->subcommand();                  // First positional: "search"
+$p->args();                        // Remaining positionals before options
+$p->arg(0);                        // First arg after subcommand
+$p->scanOption('limit', 'l');      // --limit=10, --limit 10, -l 10, -l=10
 $p->wantsJson();                   // --json flag
 $p->collectOption('attach', 'a');  // Multiple: --attach f1 --attach f2
 ```
@@ -75,7 +99,7 @@ For skills with subcommands (e.g., `gccli accounts list`):
 ```php
 private function routeAccounts(ParsedInput $p): int
 {
-    $shifted = $p->shift(1); // Removes "accounts", now "list" is command
+    $shifted = $p->shift(1); // Removes "accounts", now "list" is subcommand
 
     return app(Router::class)
         ->routes([
