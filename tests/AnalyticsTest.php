@@ -19,7 +19,7 @@ describe('NullAnalytics', function () {
 
 describe('JsonlStorage', function () {
     beforeEach(function () {
-        $this->tempFile = sys_get_temp_dir() . '/test-' . uniqid() . '.jsonl';
+        $this->tempFile = sys_get_temp_dir().'/test-'.uniqid().'.jsonl';
         $this->storage = new JsonlStorage($this->tempFile);
     });
 
@@ -70,7 +70,7 @@ describe('JsonlStorage', function () {
 
 describe('Analytics', function () {
     beforeEach(function () {
-        $this->tempFile = sys_get_temp_dir() . '/analytics-test-' . uniqid() . '.jsonl';
+        $this->tempFile = sys_get_temp_dir().'/analytics-test-'.uniqid().'.jsonl';
     });
 
     afterEach(function () {

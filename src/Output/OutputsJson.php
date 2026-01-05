@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  * Provides standardized JSON responses for agent consumption.
  * Success data goes to stdout, errors go to stderr.
  */
-class OutputsJson
+final class OutputsJson
 {
     /**
      * Output successful JSON response to stdout.
@@ -38,14 +38,14 @@ class OutputsJson
     /**
      * Output error JSON response to stderr.
      *
-     * @param array<string, mixed> $meta
+     * @param  array<string, mixed>  $meta
      */
     public static function jsonError(Command $ctx, string $message, array $meta = [], int $exitCode = 1): int
     {
         $response = ['error' => $message, ...$meta];
         $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        fwrite(STDERR, $json . "\n");
+        fwrite(STDERR, $json."\n");
 
         return $exitCode;
     }
@@ -53,7 +53,7 @@ class OutputsJson
     /**
      * Output validation error response.
      *
-     * @param array<string, string|array<int, string>> $errors
+     * @param  array<string, string|array<int, string>>  $errors
      */
     public static function jsonValidationError(Command $ctx, array $errors): int
     {

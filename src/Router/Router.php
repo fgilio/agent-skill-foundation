@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  * Uses composition over inheritance - inject this service into your
  * DefaultCommand rather than extending a base class.
  */
-class Router
+final class Router
 {
     /** @var array<string, callable(ParsedInput, Command): int> */
     private array $routes = [];
@@ -27,7 +27,7 @@ class Router
      * Define routes as subcommand => handler array.
      * Each handler: callable(ParsedInput $p, Command $ctx): int
      *
-     * @param array<string, callable(ParsedInput, Command): int> $routes
+     * @param  array<string, callable(ParsedInput, Command): int>  $routes
      */
     public function routes(array $routes): self
     {

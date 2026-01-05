@@ -7,7 +7,7 @@ namespace Fgilio\AgentSkillFoundation\Analytics;
 /**
  * No-op analytics for tests and CI environments.
  */
-class NullAnalytics implements AnalyticsInterface
+final class NullAnalytics implements AnalyticsInterface
 {
     /** @param array<string, mixed> $metadata */
     public function track(string $command, array $metadata = []): void

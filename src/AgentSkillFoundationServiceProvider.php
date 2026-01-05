@@ -9,7 +9,7 @@ use Fgilio\AgentSkillFoundation\Analytics\NullAnalytics;
 use Fgilio\AgentSkillFoundation\Router\Router;
 use Illuminate\Support\ServiceProvider;
 
-class AgentSkillFoundationServiceProvider extends ServiceProvider
+final class AgentSkillFoundationServiceProvider extends ServiceProvider
 {
     /**
      * Register services.

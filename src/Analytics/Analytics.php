@@ -10,7 +10,7 @@ namespace Fgilio\AgentSkillFoundation\Analytics;
  * Stores usage data in a JSONL file. Disabled automatically in CI
  * environments or when SKILL_ANALYTICS=off.
  */
-class Analytics implements AnalyticsInterface
+final class Analytics implements AnalyticsInterface
 {
     private JsonlStorage $storage;
 
@@ -34,9 +34,17 @@ class Analytics implements AnalyticsInterface
     }
 
     /**
+     * Create a disabled analytics instance.
+     */
+    public static function disabled(string $skillName = 'unknown'): self
+    {
+        return new self($skillName, null, false);
+    }
+
+    /**
      * Track a command invocation.
      *
-     * @param array<string, mixed> $metadata
+     * @param  array<string, mixed>  $metadata
      */
     public function track(string $command, array $metadata = []): void
     {
@@ -72,14 +80,6 @@ class Analytics implements AnalyticsInterface
     }
 
     /**
-     * Create a disabled analytics instance.
-     */
-    public static function disabled(string $skillName = 'unknown'): self
-    {
-        return new self($skillName, null, false);
-    }
-
-    /**
      * Determine if analytics should be enabled by default.
      */
     private function shouldBeEnabled(): bool
@@ -108,18 +108,18 @@ class Analytics implements AnalyticsInterface
 
         // Try common writable locations
         $candidates = [
-            $xdgDataHome !== false ? $xdgDataHome : $home . '/.local/share',
+            $xdgDataHome !== false ? $xdgDataHome : $home.'/.local/share',
             $home,
             sys_get_temp_dir(),
         ];
 
         foreach ($candidates as $base) {
             if ($base !== '' && is_dir($base) && is_writable($base)) {
-                return $base . '/.agent-skills/analytics.jsonl';
+                return $base.'/.agent-skills/analytics.jsonl';
             }
         }
 
         // Fallback to temp
-        return sys_get_temp_dir() . '/.agent-skills/analytics.jsonl';
+        return sys_get_temp_dir().'/.agent-skills/analytics.jsonl';
     }
 }

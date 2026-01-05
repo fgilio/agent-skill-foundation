@@ -7,7 +7,7 @@ namespace Fgilio\AgentSkillFoundation\Analytics;
 /**
  * JSONL file storage with concurrent write safety.
  */
-class JsonlStorage
+final class JsonlStorage
 {
     public function __construct(
         private string $path
@@ -16,7 +16,7 @@ class JsonlStorage
     /**
      * Append a record to the JSONL file.
      *
-     * @param array<string, mixed> $record
+     * @param  array<string, mixed>  $record
      */
     public function append(array $record): bool
     {
@@ -37,7 +37,7 @@ class JsonlStorage
             return false;
         }
 
-        $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
 
         // Use FILE_APPEND | LOCK_EX for concurrent safety
         $result = @file_put_contents($this->path, $line, FILE_APPEND | LOCK_EX);

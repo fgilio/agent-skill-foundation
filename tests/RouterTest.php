@@ -58,7 +58,8 @@ describe('Router::runWith()', function () {
         ]);
 
         // Create a simple mock command using anonymous class
-        $command = new class extends \Illuminate\Console\Command {
+        $command = new class extends Illuminate\Console\Command
+        {
             protected $name = 'test';
         };
 
@@ -85,7 +86,8 @@ describe('Router::runWith()', function () {
                 return 1;
             });
 
-        $command = new class extends \Illuminate\Console\Command {
+        $command = new class extends Illuminate\Console\Command
+        {
             protected $name = 'test';
         };
         $parsed = $this->createParsedInput(['nonexistent']);
@@ -109,7 +111,8 @@ describe('Router::runWith()', function () {
                 return 0;
             });
 
-        $command = new class extends \Illuminate\Console\Command {
+        $command = new class extends Illuminate\Console\Command
+        {
             protected $name = 'test';
         };
         $parsed = $this->createParsedInput(['--help']);
@@ -131,7 +134,8 @@ describe('Router::runWith()', function () {
                 return 0;
             });
 
-        $command = new class extends \Illuminate\Console\Command {
+        $command = new class extends Illuminate\Console\Command
+        {
             protected $name = 'test';
         };
         $parsed = $this->createParsedInput([]);
@@ -153,7 +157,8 @@ describe('Router::runWith()', function () {
                 return 1;
             });
 
-        $command = new class extends \Illuminate\Console\Command {
+        $command = new class extends Illuminate\Console\Command
+        {
             protected $name = 'test';
         };
         $parsed = $this->createParsedInput(['nonexistent', '--json']);

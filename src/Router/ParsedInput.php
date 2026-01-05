@@ -11,11 +11,11 @@ namespace Fgilio\AgentSkillFoundation\Router;
  * - Args must come before options
  * - Options are scanned from raw argv via scanOption()/hasFlag()
  */
-class ParsedInput
+final class ParsedInput
 {
     /**
-     * @param array<int, string> $rawArgv
-     * @param array<int, string> $args
+     * @param  array<int, string>  $rawArgv
+     * @param  array<int, string>  $args
      */
     private function __construct(
         private array $rawArgv,
@@ -29,7 +29,7 @@ class ParsedInput
      * Extracts subcommand and positional args (stopping at first option).
      * Options are accessed via scanOption()/hasFlag() from raw argv.
      *
-     * @param array<int, string> $argv
+     * @param  array<int, string>  $argv
      */
     public static function fromArgv(array $argv): self
     {
@@ -104,7 +104,7 @@ class ParsedInput
 
             // --option=value
             if (str_starts_with($arg, "--{$long}=")) {
-                return substr($arg, strlen("--{$long}="));
+                return mb_substr($arg, mb_strlen("--{$long}="));
             }
             // --option value
             if ($arg === "--{$long}" && isset($argv[$i + 1]) && ! str_starts_with($argv[$i + 1], '-')) {
@@ -116,7 +116,7 @@ class ParsedInput
             }
             // Short form: -o=value
             if ($short && str_starts_with($arg, "-{$short}=")) {
-                return substr($arg, strlen("-{$short}="));
+                return mb_substr($arg, mb_strlen("-{$short}="));
             }
             // Short form: -o value
             if ($short && $arg === "-{$short}" && isset($argv[$i + 1]) && ! str_starts_with($argv[$i + 1], '-')) {
@@ -184,7 +184,7 @@ class ParsedInput
             }
             // Long form: --option=value
             elseif (str_starts_with($arg, "--{$long}=")) {
-                $values[] = substr($arg, strlen("--{$long}="));
+                $values[] = mb_substr($arg, mb_strlen("--{$long}="));
             }
             // Short form: -o value
             elseif ($short && $arg === "-{$short}" && isset($argv[$i + 1]) && ! str_starts_with($argv[$i + 1], '-')) {
@@ -192,7 +192,7 @@ class ParsedInput
             }
             // Short form: -o=value
             elseif ($short && str_starts_with($arg, "-{$short}=")) {
-                $values[] = substr($arg, strlen("-{$short}="));
+                $values[] = mb_substr($arg, mb_strlen("-{$short}="));
             }
         }
 

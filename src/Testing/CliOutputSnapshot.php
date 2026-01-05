@@ -12,7 +12,7 @@ use PHPUnit\Framework\Assert;
  * Captures CLI output and compares against stored snapshots,
  * with ANSI stripping and customizable normalization.
  */
-class CliOutputSnapshot
+final class CliOutputSnapshot
 {
     private string $snapshotDir;
 
@@ -22,6 +22,47 @@ class CliOutputSnapshot
     public function __construct(string $snapshotDir = 'tests/snapshots')
     {
         $this->snapshotDir = $snapshotDir;
+    }
+
+    /**
+     * Strip ANSI codes from output (static helper).
+     */
+    public static function stripAnsi(string $output): string
+    {
+        return preg_replace('/\x1B\[[0-9;]*[A-Za-z]/', '', $output) ?? $output;
+    }
+
+    /**
+     * Create a normalizer that replaces dynamic values.
+     *
+     * @param  array<string, string>  $replacements
+     */
+    public static function createNormalizer(array $replacements): callable
+    {
+        return function (string $output) use ($replacements): string {
+            foreach ($replacements as $pattern => $replacement) {
+                if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
+                    // Regex pattern
+                    $output = preg_replace($pattern, $replacement, $output) ?? $output;
+                } else {
+                    // Simple string replacement
+                    $output = str_replace($pattern, $replacement, $output);
+                }
+            }
+
+            return $output;
+        };
+    }
+
+    /**
+     * Common normalizer for timestamps.
+     */
+    public static function timestampNormalizer(): callable
+    {
+        return self::createNormalizer([
+            '/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}/' => '[TIMESTAMP]',
+            '/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/' => '[DATETIME]',
+        ]);
     }
 
     /**
@@ -101,46 +142,5 @@ class CliOutputSnapshot
         }
 
         return trim($output);
-    }
-
-    /**
-     * Strip ANSI codes from output (static helper).
-     */
-    public static function stripAnsi(string $output): string
-    {
-        return preg_replace('/\x1B\[[0-9;]*[A-Za-z]/', '', $output) ?? $output;
-    }
-
-    /**
-     * Create a normalizer that replaces dynamic values.
-     *
-     * @param array<string, string> $replacements
-     */
-    public static function createNormalizer(array $replacements): callable
-    {
-        return function (string $output) use ($replacements): string {
-            foreach ($replacements as $pattern => $replacement) {
-                if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
-                    // Regex pattern
-                    $output = preg_replace($pattern, $replacement, $output) ?? $output;
-                } else {
-                    // Simple string replacement
-                    $output = str_replace($pattern, $replacement, $output);
-                }
-            }
-
-            return $output;
-        };
-    }
-
-    /**
-     * Common normalizer for timestamps.
-     */
-    public static function timestampNormalizer(): callable
-    {
-        return self::createNormalizer([
-            '/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}/' => '[TIMESTAMP]',
-            '/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/' => '[DATETIME]',
-        ]);
     }
 }
