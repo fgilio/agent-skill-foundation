@@ -1,0 +1,4 @@
+pre-push:
+  commands:
+    phpstan:
+      run: composer test:types

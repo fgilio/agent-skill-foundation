@@ -154,6 +154,15 @@ $snapshot = new CliOutputSnapshot('tests/snapshots');
 $snapshot->assertMatchesSnapshot('help-output', $output);
 ```
 
+## Development
+
+```bash
+composer install
+lefthook install  # optional, requires https://github.com/evilmartians/lefthook
+```
+
+Git hooks (via lefthook) run PHPStan on pre-push. Install lefthook with `brew install lefthook` (macOS) or see [installation docs](https://github.com/evilmartians/lefthook#install).
+
 ## License
 
 MIT
