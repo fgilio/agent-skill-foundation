@@ -1,0 +1,11 @@
+parameters:
+    level: max
+    paths:
+        - src
+
+    reportUnmatchedIgnoredErrors: true
+
+    ignoreErrors:
+        # Traits in this package are designed for consumption by external projects.
+        # They appear "unused" because they're not used within this package itself.
+        - identifier: trait.unused
