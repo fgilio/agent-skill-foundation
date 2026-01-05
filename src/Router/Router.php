@@ -14,6 +14,7 @@ use Illuminate\Console\Command;
  */
 class Router
 {
+    /** @var array<string, callable(ParsedInput, Command): int> */
     private array $routes = [];
 
     /** @var callable|null */
@@ -25,6 +26,8 @@ class Router
     /**
      * Define routes as subcommand => handler array.
      * Each handler: callable(ParsedInput $p, Command $ctx): int
+     *
+     * @param array<string, callable(ParsedInput, Command): int> $routes
      */
     public function routes(array $routes): self
     {
@@ -79,13 +82,13 @@ class Router
     public function parse(Command $context): ParsedInput
     {
         // Prefer raw argv (preserves all options)
-        $rawArgv = $_SERVER['argv'] ?? [];
+        /** @var array<int, string> $rawArgv */
+        $rawArgv = is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [];
 
         // Test harness fallback: synthesize from context when no real argv
-        if (empty($rawArgv) || count($rawArgv) <= 1) {
-            $contextArgs = method_exists($context, 'argument')
-                ? (array) $context->argument('args')
-                : [];
+        if ($rawArgv === [] || count($rawArgv) <= 1) {
+            /** @var array<int, string> $contextArgs */
+            $contextArgs = (array) $context->argument('args');
             $rawArgv = ['app', ...$contextArgs];
         }
 
@@ -100,6 +103,8 @@ class Router
 
     /**
      * Get available route names.
+     *
+     * @return array<int, string>
      */
     public function routeNames(): array
     {
@@ -123,24 +128,37 @@ class Router
 
         // Help requested or no subcommand
         if ($parsed->wantsHelp() || $subcommand === null) {
-            if ($subcommand && $subcommand !== 'help' && isset($this->routes[$subcommand])) {
+            if ($subcommand !== null && $subcommand !== 'help' && isset($this->routes[$subcommand])) {
                 return $this->showSubcommandHelp($context, $subcommand);
             }
 
-            return $this->helpCallback
-                ? ($this->helpCallback)($context, null)
-                : $this->defaultHelp($context);
+            if ($this->helpCallback !== null) {
+                /** @var int $result */
+                $result = ($this->helpCallback)($context, null);
+
+                return $result;
+            }
+
+            return $this->defaultHelp($context);
         }
 
         // Route to handler
         if (isset($this->routes[$subcommand])) {
-            return $this->routes[$subcommand]($parsed, $context);
+            /** @var int $result */
+            $result = $this->routes[$subcommand]($parsed, $context);
+
+            return $result;
         }
 
         // Unknown subcommand
-        return $this->unknownCallback
-            ? ($this->unknownCallback)($parsed, $context)
-            : $this->defaultUnknown($context, $parsed);
+        if ($this->unknownCallback !== null) {
+            /** @var int $result */
+            $result = ($this->unknownCallback)($parsed, $context);
+
+            return $result;
+        }
+
+        return $this->defaultUnknown($context, $parsed);
     }
 
     private function defaultHelp(Command $context): int
@@ -165,8 +183,13 @@ class Router
 
     private function showSubcommandHelp(Command $context, string $subcommand): int
     {
-        return $this->helpCallback
-            ? ($this->helpCallback)($context, $subcommand)
-            : $this->defaultHelp($context);
+        if ($this->helpCallback !== null) {
+            /** @var int $result */
+            $result = ($this->helpCallback)($context, $subcommand);
+
+            return $result;
+        }
+
+        return $this->defaultHelp($context);
     }
 }

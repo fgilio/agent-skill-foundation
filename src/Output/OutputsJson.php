@@ -21,7 +21,8 @@ class OutputsJson
     {
         $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | $options;
 
-        $ctx->line(json_encode($data, $flags));
+        $json = json_encode($data, $flags);
+        $ctx->line($json !== false ? $json : '{}');
 
         return Command::SUCCESS;
     }
@@ -36,6 +37,8 @@ class OutputsJson
 
     /**
      * Output error JSON response to stderr.
+     *
+     * @param array<string, mixed> $meta
      */
     public static function jsonError(Command $ctx, string $message, array $meta = [], int $exitCode = 1): int
     {
@@ -49,6 +52,8 @@ class OutputsJson
 
     /**
      * Output validation error response.
+     *
+     * @param array<string, string|array<int, string>> $errors
      */
     public static function jsonValidationError(Command $ctx, array $errors): int
     {

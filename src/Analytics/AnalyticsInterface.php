@@ -11,6 +11,8 @@ interface AnalyticsInterface
 {
     /**
      * Track a command invocation.
+     *
+     * @param array<string, mixed> $metadata
      */
     public function track(string $command, array $metadata = []): void;
 

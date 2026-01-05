@@ -9,6 +9,7 @@ namespace Fgilio\AgentSkillFoundation\Analytics;
  */
 class NullAnalytics implements AnalyticsInterface
 {
+    /** @param array<string, mixed> $metadata */
     public function track(string $command, array $metadata = []): void
     {
         // Intentionally empty

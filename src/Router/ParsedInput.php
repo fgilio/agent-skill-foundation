@@ -13,6 +13,10 @@ namespace Fgilio\AgentSkillFoundation\Router;
  */
 class ParsedInput
 {
+    /**
+     * @param array<int, string> $rawArgv
+     * @param array<int, string> $args
+     */
     private function __construct(
         private array $rawArgv,
         private ?string $subcommand,
@@ -24,6 +28,8 @@ class ParsedInput
      *
      * Extracts subcommand and positional args (stopping at first option).
      * Options are accessed via scanOption()/hasFlag() from raw argv.
+     *
+     * @param array<int, string> $argv
      */
     public static function fromArgv(array $argv): self
     {
@@ -59,6 +65,8 @@ class ParsedInput
 
     /**
      * Get positional args after subcommand (before any options).
+     *
+     * @return array<int, string>
      */
     public function args(): array
     {
@@ -67,6 +75,8 @@ class ParsedInput
 
     /**
      * Alias for args() - improves readability in some contexts.
+     *
+     * @return array<int, string>
      */
     public function remainingArgs(): array
     {
@@ -157,6 +167,8 @@ class ParsedInput
     /**
      * Collect all values for a repeatable option from raw argv.
      * Handles: --attach file1 --attach file2, -a file1 -a file2
+     *
+     * @return array<int, string>
      */
     public function collectOption(string $long, ?string $short = null): array
     {
@@ -189,6 +201,8 @@ class ParsedInput
 
     /**
      * Get raw argv array.
+     *
+     * @return array<int, string>
      */
     public function rawArgv(): array
     {

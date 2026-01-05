@@ -35,6 +35,8 @@ class Analytics implements AnalyticsInterface
 
     /**
      * Track a command invocation.
+     *
+     * @param array<string, mixed> $metadata
      */
     public function track(string $command, array $metadata = []): void
     {
@@ -101,15 +103,18 @@ class Analytics implements AnalyticsInterface
      */
     private function defaultStoragePath(): string
     {
+        $xdgDataHome = getenv('XDG_DATA_HOME');
+        $home = is_string($_SERVER['HOME'] ?? null) ? $_SERVER['HOME'] : '';
+
         // Try common writable locations
         $candidates = [
-            getenv('XDG_DATA_HOME') ?: ($_SERVER['HOME'] ?? '') . '/.local/share',
-            $_SERVER['HOME'] ?? '',
+            $xdgDataHome !== false ? $xdgDataHome : $home . '/.local/share',
+            $home,
             sys_get_temp_dir(),
         ];
 
         foreach ($candidates as $base) {
-            if ($base && is_dir($base) && is_writable($base)) {
+            if ($base !== '' && is_dir($base) && is_writable($base)) {
                 return $base . '/.agent-skills/analytics.jsonl';
             }
         }

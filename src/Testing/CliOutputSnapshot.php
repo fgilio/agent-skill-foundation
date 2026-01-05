@@ -46,11 +46,10 @@ class CliOutputSnapshot
             @mkdir(dirname($path), 0755, true);
             file_put_contents($path, $this->normalizeOutput($output));
             Assert::markTestIncomplete("Snapshot created: {$path}");
-
-            return;
         }
 
         $expected = file_get_contents($path);
+        Assert::assertIsString($expected, "Unable to read snapshot: {$path}");
         Assert::assertEquals(
             $this->normalizeOutput($expected),
             $this->normalizeOutput($output),
@@ -96,7 +95,8 @@ class CliOutputSnapshot
         $output = str_replace("\r\n", "\n", $output);
 
         // Apply custom normalizer if set
-        if ($this->customNormalizer) {
+        if ($this->customNormalizer !== null) {
+            /** @var string $output */
             $output = ($this->customNormalizer)($output);
         }
 
@@ -108,11 +108,13 @@ class CliOutputSnapshot
      */
     public static function stripAnsi(string $output): string
     {
-        return preg_replace('/\x1B\[[0-9;]*[A-Za-z]/', '', $output);
+        return preg_replace('/\x1B\[[0-9;]*[A-Za-z]/', '', $output) ?? $output;
     }
 
     /**
      * Create a normalizer that replaces dynamic values.
+     *
+     * @param array<string, string> $replacements
      */
     public static function createNormalizer(array $replacements): callable
     {
@@ -120,7 +122,7 @@ class CliOutputSnapshot
             foreach ($replacements as $pattern => $replacement) {
                 if (str_starts_with($pattern, '/') && str_ends_with($pattern, '/')) {
                     // Regex pattern
-                    $output = preg_replace($pattern, $replacement, $output);
+                    $output = preg_replace($pattern, $replacement, $output) ?? $output;
                 } else {
                     // Simple string replacement
                     $output = str_replace($pattern, $replacement, $output);

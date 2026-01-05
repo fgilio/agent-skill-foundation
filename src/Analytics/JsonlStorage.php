@@ -15,6 +15,8 @@ class JsonlStorage
 
     /**
      * Append a record to the JSONL file.
+     *
+     * @param array<string, mixed> $record
      */
     public function append(array $record): bool
     {
@@ -45,6 +47,8 @@ class JsonlStorage
 
     /**
      * Read all records from the JSONL file.
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function read(): array
     {
@@ -62,8 +66,9 @@ class JsonlStorage
         while (($line = fgets($handle)) !== false) {
             $line = trim($line);
             if ($line !== '') {
+                /** @var array<string, mixed>|null $decoded */
                 $decoded = json_decode($line, true);
-                if ($decoded !== null) {
+                if (is_array($decoded)) {
                     $records[] = $decoded;
                 }
             }
