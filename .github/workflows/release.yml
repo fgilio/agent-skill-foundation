@@ -13,6 +13,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create Release
-        run: gh release create ${{ github.ref_name }} --generate-notes
+        run: |
+          # Generate notes and append Packagist link
+          NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name=${{ github.ref_name }} \
+            --jq '.body')
+
+          gh release create ${{ github.ref_name }} --notes "${NOTES}
+
+          ---
+
+          ## Install
+
+          \`\`\`bash
+          composer require fgilio/agent-skill-foundation
+          \`\`\`
+
+          📦 [View on Packagist](https://packagist.org/packages/fgilio/agent-skill-foundation)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
