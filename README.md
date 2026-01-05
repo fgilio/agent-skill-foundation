@@ -1,6 +1,7 @@
 # Agent Skill Foundation
 
 [![Tests](https://github.com/fgilio/agent-skill-foundation/actions/workflows/tests.yml/badge.svg)](https://github.com/fgilio/agent-skill-foundation/actions/workflows/tests.yml)
+[![Packagist Version](https://img.shields.io/packagist/v/fgilio/agent-skill-foundation)](https://packagist.org/packages/fgilio/agent-skill-foundation)
 
 Foundation package for PHP CLI skills used by AI agents (Claude Code).
 
