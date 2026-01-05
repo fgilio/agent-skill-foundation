@@ -26,5 +26,8 @@ jobs:
       - name: Run tests
         run: ./vendor/bin/pest
 
+      - name: Check code style
+        run: composer test:lint
+
       - name: Run static analysis
         run: composer test:types

@@ -1,3 +1,9 @@
+pre-commit:
+  commands:
+    pint:
+      glob: "*.php"
+      run: ./vendor/bin/pint {staged_files} && git add {staged_files}
+
 pre-push:
   commands:
     phpstan:
