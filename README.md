@@ -13,102 +13,149 @@ composer require fgilio/agent-skill-foundation
 
 ## Features
 
-- **Router** - Command routing with lenient parsing
-- **ParsedInput** - Type-safe CLI argument/option access
-- **Analytics** - Local usage tracking (JSONL)
+- **Native Artisan Routing** - Use Laravel Zero's built-in command routing (recommended)
+- **Global `--json` Option** - Register `--json` as an application-level option
+- **JSON Exception Renderer** - Output JSON errors for parse-time failures
+- **Analytics** - Local usage tracking via console events
+- **AgentCommand** - Trait with JSON output helpers for commands
 - **OutputsJson** - Standardized JSON output helpers
-- **CliOutputSnapshot** - Contract test helper with ANSI stripping
 
-## Quick Start
+## Quick Start (Native Routing)
+
+Use Laravel Zero's native command routing. Commands self-describe via `$signature`:
 
 ```php
-use Fgilio\AgentSkillFoundation\Router\Router;
-use Fgilio\AgentSkillFoundation\Router\ParsedInput;
-use Illuminate\Console\Command;
+// app/Commands/SearchCommand.php
+namespace App\Commands;
 
-class DefaultCommand extends Command
+use LaravelZero\Framework\Commands\Command;
+use Fgilio\AgentSkillFoundation\Console\AgentCommand;
+
+class SearchCommand extends Command
 {
-    protected $signature = 'default {args?*}';
+    use AgentCommand;
 
-    public function __construct(private Router $router)
-    {
-        parent::__construct();
-    }
+    protected $signature = 'search {query* : Search terms} {--limit=10 : Max results}';
+    protected $description = 'Search the index';
 
     public function handle(): int
     {
-        return $this->router
-            ->routes([
-                'search' => fn(ParsedInput $p, Command $ctx) => $this->search($p),
-                'show' => fn(ParsedInput $p, Command $ctx) => $this->show($p),
-            ])
-            ->help(fn(Command $ctx) => $this->showHelp())
-            ->unknown(fn(ParsedInput $p, Command $ctx) => $this->unknownSubcommand($p))
-            ->run($this);
-    }
+        $query = implode(' ', $this->argument('query'));
+        $limit = (int) $this->option('limit');
 
-    private function search(ParsedInput $p): int
-    {
-        $query = implode(' ', $p->remainingArgs());
-        $limit = $p->scanOption('limit', 'l', 10);
-        $json = $p->wantsJson();
+        $results = $this->performSearch($query, $limit);
 
-        // ... search logic
+        if ($this->wantsJson()) {
+            return $this->outputJson(['results' => $results]);
+        }
+
+        $this->table(['Title', 'URL'], $results);
         return self::SUCCESS;
     }
+}
+```
 
-    private function unknownSubcommand(ParsedInput $p): int
+### Application Setup
+
+Register global `--json` option in your Application class:
+
+```php
+// app/Application.php
+namespace App;
+
+use Fgilio\AgentSkillFoundation\Console\RegistersGlobalJsonOption;
+use LaravelZero\Framework\Application as BaseApplication;
+
+class Application extends BaseApplication
+{
+    use RegistersGlobalJsonOption;
+}
+```
+
+### JSON Exception Handling
+
+Add JSON error rendering to your entrypoint for parse-time failures:
+
+```php
+// my-skill (entrypoint)
+use Fgilio\AgentSkillFoundation\Console\JsonExceptionRenderer;
+
+try {
+    $status = $kernel->handle($input, $output);
+} catch (Throwable $e) {
+    if (JsonExceptionRenderer::render($e)) {
+        exit(JsonExceptionRenderer::exitCode($e));
+    }
+    throw $e;
+}
+```
+
+### Analytics via Console Events
+
+Analytics are automatically tracked via console events when you register the service provider. Track additional metadata by injecting Analytics into your commands:
+
+```php
+use Fgilio\AgentSkillFoundation\Analytics\Analytics;
+
+public function handle(Analytics $analytics): int
+{
+    $startTime = microtime(true);
+
+    // ... command logic
+
+    $analytics->track('search', self::SUCCESS, [
+        'query' => $query,
+        'results' => count($results),
+    ], $startTime);
+
+    return self::SUCCESS;
+}
+```
+
+## AgentCommand Trait
+
+The `AgentCommand` trait provides JSON output helpers:
+
+```php
+use Fgilio\AgentSkillFoundation\Console\AgentCommand;
+
+class MyCommand extends Command
+{
+    use AgentCommand;
+
+    public function handle(): int
     {
-        $subcommand = $p->subcommand();
-        if ($p->wantsJson()) {
-            fwrite(STDERR, json_encode(['error' => "Unknown: {$subcommand}"]));
-        } else {
-            $this->error("Unknown subcommand: {$subcommand}");
+        // Check if --json flag is set
+        if ($this->wantsJson()) {
+            // Output JSON to stdout
+            return $this->outputJson(['data' => $results]);
         }
-        return self::FAILURE;
+
+        // Output JSON error to stderr
+        return $this->jsonError('Not found', ['id' => $id]);
     }
 }
 ```
 
-## CLI Contract
+## Command Naming
 
-ParsedInput enforces `<subcommand> [args...] [options...]`:
+Use Artisan conventions:
 
-- **Subcommand** comes first (e.g., `search`)
-- **Args** follow the subcommand (e.g., `search foo bar`)
-- **Options** come last (e.g., `search foo --limit=10 --json`)
-
-Args stop at the first option token. This prevents option values from leaking into args.
-
-## Lenient Parsing
-
-ParsedInput scans raw argv directly, supporting options that aren't pre-declared:
+| Pattern | Example | Usage |
+|---------|---------|-------|
+| Single word | `today`, `search` | Common commands |
+| Namespaced | `accounts:list`, `gmail:send` | Grouped commands |
 
 ```php
-$p->subcommand();                  // First positional: "search"
-$p->args();                        // Remaining positionals before options
-$p->arg(0);                        // First arg after subcommand
-$p->scanOption('limit', 'l');      // --limit=10, --limit 10, -l 10, -l=10
-$p->wantsJson();                   // --json flag
-$p->collectOption('attach', 'a');  // Multiple: --attach f1 --attach f2
-```
-
-## Nested Routing
-
-For skills with subcommands (e.g., `gccli accounts list`):
-
-```php
-private function routeAccounts(ParsedInput $p): int
-{
-    $shifted = $p->shift(1); // Removes "accounts", now "list" is subcommand
-
-    return app(Router::class)
-        ->routes([
-            'list' => fn(ParsedInput $p) => $this->accountsList(),
-            'add' => fn(ParsedInput $p) => $this->accountsAdd($p),
-        ])
-        ->runWith($shifted, $this);
-}
+// config/commands.php
+return [
+    'default' => NunoMaduro\LaravelConsoleSummary\SummaryCommand::class,
+    'paths' => [app_path('Commands')],
+    'hidden' => [
+        // Hide internal/dev commands
+        App\Commands\BuildCommand::class,
+    ],
+];
 ```
 
 ## Analytics
@@ -119,12 +166,12 @@ Track command usage locally:
 use Fgilio\AgentSkillFoundation\Analytics\Analytics;
 
 $analytics = new Analytics('my-skill');
-$analytics->track('search', ['query' => 'foo', 'results' => 42]);
+$analytics->track('search', Command::SUCCESS, ['query' => 'foo', 'results' => 42], $startTime);
 ```
 
 Disabled automatically in CI or when `SKILL_ANALYTICS=off`.
 
-## JSON Output
+## JSON Output (Static Helpers)
 
 Standardized JSON responses for agent consumption:
 
@@ -138,7 +185,7 @@ return OutputsJson::jsonOkPretty($ctx, ['results' => $data]);
 return OutputsJson::jsonError($ctx, 'Not found', ['id' => $id]);
 
 // Conditional based on --json flag
-return OutputsJson::maybeJson($ctx, $p->wantsJson(), $data, fn($ctx, $d) =>
+return OutputsJson::maybeJson($ctx, $this->option('json'), $data, fn($ctx, $d) =>
     $ctx->table(['Name', 'Value'], $d)
 );
 ```
@@ -152,6 +199,25 @@ use Fgilio\AgentSkillFoundation\Testing\CliOutputSnapshot;
 
 $snapshot = new CliOutputSnapshot('tests/snapshots');
 $snapshot->assertMatchesSnapshot('help-output', $output);
+```
+
+For acceptance tests, use subprocess-based testing with Symfony Process:
+
+```php
+use Symfony\Component\Process\Process;
+
+function mySkill(string ...$args): array
+{
+    $process = new Process(['php', 'my-skill', ...$args], __DIR__.'/../../');
+    $process->run();
+    return [$process->getExitCode(), $process->getOutput(), $process->getErrorOutput()];
+}
+
+it('shows help', function () {
+    [$exitCode, $stdout] = mySkill('--help');
+    expect($exitCode)->toBe(0);
+    expect($stdout)->toContain('USAGE');
+});
 ```
 
 ## Development

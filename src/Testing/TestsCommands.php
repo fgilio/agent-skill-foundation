@@ -4,39 +4,11 @@ declare(strict_types=1);
 
 namespace Fgilio\AgentSkillFoundation\Testing;
 
-use Fgilio\AgentSkillFoundation\Router\ParsedInput;
-
 /**
  * Test helpers for CLI commands.
  */
 trait TestsCommands
 {
-    /**
-     * Create a ParsedInput from an argv array for testing.
-     * Pass argv WITHOUT the binary name - it will be added.
-     */
-    protected function createParsedInput(array $argv): ParsedInput
-    {
-        // Ensure first element is binary name (add if not present)
-        if (empty($argv)) {
-            $argv = ['app'];
-        } elseif (! str_starts_with($argv[0], '/') && $argv[0] !== 'app') {
-            array_unshift($argv, 'app');
-        }
-
-        return ParsedInput::fromArgv($argv);
-    }
-
-    /**
-     * Create a ParsedInput from a command string.
-     */
-    protected function parsedInputFromString(string $commandLine): ParsedInput
-    {
-        $argv = str_getcsv($commandLine, ' ');
-
-        return $this->createParsedInput($argv);
-    }
-
     /**
      * Capture stderr output.
      */

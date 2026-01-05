@@ -73,7 +73,7 @@ final class OutputsJson
     }
 
     /**
-     * Conditionally output as JSON or plain text based on ParsedInput.
+     * Conditionally output as JSON or plain text.
      */
     public static function maybeJson(
         Command $ctx,
