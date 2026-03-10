@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fgilio\AgentSkillFoundation\Console;
 
+use Fgilio\AgentSkillFoundation\Build\BoxConfig;
 use Illuminate\Console\Command;
 
 /**
@@ -41,6 +42,10 @@ final class BuildCommand extends Command
 
             return self::FAILURE;
         }
+
+        /** @var list<string> $extraDirs */
+        $extraDirs = config('build.extra_dirs', []);
+        BoxConfig::write($name, $projectDir.'/box.json', $extraDirs);
 
         $strippedDev = false;
 
