@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fgilio\AgentSkillFoundation\Console\Concerns;
 
+use Fgilio\AgentSkillFoundation\Console\BuildCommand;
 use Phar;
 
 /**
@@ -15,7 +16,24 @@ use Phar;
 trait HidesDevCommands
 {
     /**
-     * @param  array<int, class-string>  $commands
+     * Standard framework dev commands hidden in all skill binaries.
+     *
+     * @var list<class-string>
+     */
+    private const DEFAULT_HIDDEN_COMMANDS = [
+        BuildCommand::class,
+        // Framework dev commands (string literals - these packages are not
+        // required by the foundation, only by consumers at runtime)
+        'NunoMaduro\Collision\Adapters\Laravel\Commands\TestCommand',
+        'LaravelZero\Framework\Commands\BuildCommand',
+        'LaravelZero\Framework\Commands\InstallCommand',
+        'LaravelZero\Framework\Commands\RenameCommand',
+        'LaravelZero\Framework\Commands\MakeCommand',
+        'LaravelZero\Framework\Commands\TestMakeCommand',
+    ];
+
+    /**
+     * @param  array<int, class-string>  $commands  Additional commands to hide
      */
     protected function hideDevCommands(array $commands = []): void
     {
@@ -25,6 +43,6 @@ trait HidesDevCommands
 
         /** @var array<int, class-string> $hidden */
         $hidden = config('commands.hidden', []);
-        config(['commands.hidden' => array_merge($hidden, $commands)]);
+        config(['commands.hidden' => array_merge($hidden, self::DEFAULT_HIDDEN_COMMANDS, $commands)]);
     }
 }

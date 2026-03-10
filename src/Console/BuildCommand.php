@@ -72,6 +72,8 @@ final class BuildCommand extends Command
                 if (! $this->installToSkillRoot($binaryPath, $skillRoot, $name)) {
                     return self::FAILURE;
                 }
+            } else {
+                $this->codesignBinary($binaryPath);
             }
 
             $this->newLine();
@@ -169,8 +171,6 @@ final class BuildCommand extends Command
             escapeshellarg($binaryPath),
             escapeshellarg($binaryPath)
         ), $output, $exitCode);
-
-        $this->codesignBinary($binaryPath);
 
         if ($exitCode !== 0 || ! file_exists($binaryPath)) {
             $this->error('Failed to combine binary');
