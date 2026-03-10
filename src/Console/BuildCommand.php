@@ -92,12 +92,10 @@ final class BuildCommand extends Command
     {
         $this->info('Building via toolchain...');
 
-        $output = [];
-        $exitCode = 0;
-        exec(sprintf(
+        [$exitCode, $output] = $this->shell(sprintf(
             'cd %s && php-cli-skill-build --keep-phar',
             escapeshellarg($projectDir)
-        ), $output, $exitCode);
+        ));
 
         if ($exitCode !== 0) {
             $this->error('Toolchain build failed:');
@@ -134,14 +132,12 @@ final class BuildCommand extends Command
 
         $this->info('Building PHAR...');
 
-        $output = [];
-        $exitCode = 0;
-        exec(sprintf(
+        [$exitCode, $output] = $this->shell(sprintf(
             'cd %s && php -d phar.readonly=Off %s compile --config=%s 2>&1',
             escapeshellarg($projectDir),
             escapeshellarg($boxPath),
             escapeshellarg($projectDir.'/box.json')
-        ), $output, $exitCode);
+        ));
 
         if ($exitCode !== 0) {
             $this->error('Box compile failed:');
@@ -163,14 +159,13 @@ final class BuildCommand extends Command
         $this->info('Combining with micro.sfx...');
 
         $binaryPath = $buildsDir.'/'.$name;
-        $output = [];
-        exec(sprintf(
+        [$exitCode] = $this->shell(sprintf(
             'cat %s %s > %s && chmod +x %s',
             escapeshellarg($microPath),
             escapeshellarg($pharPath),
             escapeshellarg($binaryPath),
             escapeshellarg($binaryPath)
-        ), $output, $exitCode);
+        ));
 
         if ($exitCode !== 0 || ! file_exists($binaryPath)) {
             $this->error('Failed to combine binary');
@@ -207,20 +202,16 @@ final class BuildCommand extends Command
             return;
         }
 
-        $output = [];
-        $exitCode = 0;
-        exec(sprintf('php-cli-skill-codesign %s', escapeshellarg($path)), $output, $exitCode);
+        [$exitCode] = $this->shell(sprintf('php-cli-skill-codesign %s', escapeshellarg($path)));
 
         if ($exitCode !== 0) {
-            exec(sprintf('codesign -f -s - --timestamp=none %s 2>&1', escapeshellarg($path)));
+            $this->shell(sprintf('codesign -f -s - --timestamp=none %s 2>&1', escapeshellarg($path)));
         }
     }
 
     private function findToolchain(): bool
     {
-        $output = [];
-        $exitCode = 0;
-        exec('command -v php-cli-skill-build', $output, $exitCode);
+        [$exitCode] = $this->shell('command -v php-cli-skill-build');
 
         return $exitCode === 0;
     }
@@ -233,10 +224,20 @@ final class BuildCommand extends Command
             $noDev ? '--no-dev --optimize-autoloader' : ''
         );
 
-        $output = [];
-        $exitCode = 0;
-        exec($cmd, $output, $exitCode);
+        [$exitCode] = $this->shell($cmd);
 
         return $exitCode === 0;
+    }
+
+    /**
+     * @return array{0: int, 1: list<string>}
+     */
+    private function shell(string $command): array
+    {
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+
+        return [$exitCode, $output];
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Fgilio\AgentSkillFoundation;
 
+use Fgilio\AgentSkillFoundation\Analytics\Analytics;
 use Fgilio\AgentSkillFoundation\Analytics\AnalyticsInterface;
-use Fgilio\AgentSkillFoundation\Analytics\NullAnalytics;
 use Fgilio\AgentSkillFoundation\Console\AnalyticsEventSubscriber;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Events\Dispatcher;
@@ -18,8 +18,13 @@ final class AgentSkillFoundationServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Default to NullAnalytics - skills override with real Analytics if needed
-        $this->app->bind(AnalyticsInterface::class, NullAnalytics::class);
+        // Auto-enable analytics for all consumers using their app name
+        $this->app->singleton(AnalyticsInterface::class, function () {
+            /** @var string $appName */
+            $appName = config('app.name');
+
+            return new Analytics($appName);
+        });
 
         // Register analytics event subscriber
         $this->app->singleton(AnalyticsEventSubscriber::class, function (Application $app) {
@@ -36,7 +41,7 @@ final class AgentSkillFoundationServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register shared BuildCommand unless consumer overrides it
-        if (! class_exists(\App\Commands\BuildCommand::class)) {
+        if (! class_exists(\App\Commands\BuildCommand::class, false)) {
             $this->commands([Console\BuildCommand::class]);
         }
 
