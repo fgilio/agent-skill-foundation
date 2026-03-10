@@ -35,6 +35,11 @@ final class AgentSkillFoundationServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register shared BuildCommand unless consumer overrides it
+        if (! class_exists(\App\Commands\BuildCommand::class)) {
+            $this->commands([Console\BuildCommand::class]);
+        }
+
         // Subscribe to console events for automatic analytics tracking
         if ($this->app->bound(Dispatcher::class)) {
             /** @var AnalyticsEventSubscriber $subscriber */
