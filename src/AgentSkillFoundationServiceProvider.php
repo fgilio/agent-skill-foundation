@@ -7,6 +7,7 @@ namespace Fgilio\AgentSkillFoundation;
 use Fgilio\AgentSkillFoundation\Analytics\Analytics;
 use Fgilio\AgentSkillFoundation\Analytics\AnalyticsInterface;
 use Fgilio\AgentSkillFoundation\Console\AnalyticsEventSubscriber;
+use Fgilio\AgentSkillFoundation\Extensions\ExtensionChecker;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
@@ -40,6 +41,9 @@ final class AgentSkillFoundationServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Validate required extensions are present in the compiled binary
+        ExtensionChecker::check($this->app->basePath('composer.json'));
+
         // Register shared BuildCommand unless consumer overrides it
         if (! class_exists(\App\Commands\BuildCommand::class, false)) {
             $this->commands([Console\BuildCommand::class]);
