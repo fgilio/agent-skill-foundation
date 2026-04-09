@@ -64,7 +64,7 @@ final class JsonlStorage
         }
 
         while (($line = fgets($handle)) !== false) {
-            $line = trim($line);
+            $line = mb_trim($line);
             if ($line !== '') {
                 /** @var array<string, mixed>|null $decoded */
                 $decoded = json_decode($line, true);

@@ -55,22 +55,11 @@ class SearchCommand extends Command
 }
 ```
 
-### Application Setup
+### Global `--json` Option
 
-Register global `--json` option in your Application class:
+The foundation's `AgentSkillFoundationServiceProvider` registers a global `--json` option via `Artisan::starting()` automatically. Nothing to wire up — as long as your skill uses the foundation service provider, every command supports `--json` without having to declare it in its signature.
 
-```php
-// app/Application.php
-namespace App;
-
-use Fgilio\AgentSkillFoundation\Console\RegistersGlobalJsonOption;
-use LaravelZero\Framework\Application as BaseApplication;
-
-class Application extends BaseApplication
-{
-    use RegistersGlobalJsonOption;
-}
-```
+Do NOT declare `{--json}` in a command's `$signature` when using the foundation — Symfony will throw `LogicException` on duplicate definitions.
 
 ### JSON Exception Handling
 

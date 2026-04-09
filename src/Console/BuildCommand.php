@@ -207,11 +207,15 @@ final class BuildCommand extends Command
             return;
         }
 
-        [$exitCode] = $this->shell(sprintf('php-cli-skill-codesign %s', escapeshellarg($path)));
-
-        if ($exitCode !== 0) {
-            $this->shell(sprintf('codesign -f -s - --timestamp=none %s 2>&1', escapeshellarg($path)));
+        [$lookup] = $this->shell('command -v php-cli-skill-codesign');
+        if ($lookup === 0) {
+            [$exitCode] = $this->shell(sprintf('php-cli-skill-codesign %s', escapeshellarg($path)));
+            if ($exitCode === 0) {
+                return;
+            }
         }
+
+        $this->shell(sprintf('codesign -f -s - --timestamp=none %s 2>&1', escapeshellarg($path)));
     }
 
     private function findToolchain(): bool

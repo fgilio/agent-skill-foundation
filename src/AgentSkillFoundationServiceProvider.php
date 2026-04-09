@@ -8,9 +8,11 @@ use Fgilio\AgentSkillFoundation\Analytics\Analytics;
 use Fgilio\AgentSkillFoundation\Analytics\AnalyticsInterface;
 use Fgilio\AgentSkillFoundation\Console\AnalyticsEventSubscriber;
 use Fgilio\AgentSkillFoundation\Extensions\ExtensionChecker;
+use Illuminate\Console\Application as Artisan;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Console\Input\InputOption;
 
 final class AgentSkillFoundationServiceProvider extends ServiceProvider
 {
@@ -48,6 +50,23 @@ final class AgentSkillFoundationServiceProvider extends ServiceProvider
         if (! class_exists(\App\Commands\BuildCommand::class, false)) {
             $this->commands([Console\BuildCommand::class]);
         }
+
+        // Register the global --json option on the Artisan application.
+        // Commands using this foundation must NOT declare `{--json}` in
+        // their `$signature`; Symfony's InputDefinition::addOption()
+        // throws LogicException on duplicate options.
+        Artisan::starting(function (Artisan $artisan): void {
+            $definition = $artisan->getDefinition();
+
+            if (! $definition->hasOption('json')) {
+                $definition->addOption(new InputOption(
+                    name: 'json',
+                    shortcut: null,
+                    mode: InputOption::VALUE_NONE,
+                    description: 'Output as JSON for agent consumption'
+                ));
+            }
+        });
 
         // Subscribe to console events for automatic analytics tracking
         if ($this->app->bound(Dispatcher::class)) {

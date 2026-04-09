@@ -141,6 +141,6 @@ final class CliOutputSnapshot
             $output = ($this->customNormalizer)($output);
         }
 
-        return trim($output);
+        return mb_trim($output);
     }
 }
