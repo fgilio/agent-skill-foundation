@@ -87,6 +87,8 @@ describe('BoxConfig::generate', function () {
                         'symfony/translation/Test',
                         'symfony/translation-contracts/Test',
                         'symfony/var-dumper/Test',
+                        'nunomaduro/pao',
+                        'shipfastlabs/agent-detector',
                     ],
                     'notName' => [
                         '*.exe',

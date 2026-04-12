@@ -8,6 +8,11 @@ use RuntimeException;
 
 final class BoxConfig
 {
+    /** @var list<string> Packages to strip entirely before building (removed via composer remove). */
+    public const array BUILD_EXCLUDED_PACKAGES = [
+        'nunomaduro/pao',
+    ];
+
     private const array BASE_DIRS = ['app', 'bootstrap', 'config'];
 
     private const array VENDOR_EXCLUDES = [
@@ -43,6 +48,8 @@ final class BoxConfig
         'symfony/translation/Test',
         'symfony/translation-contracts/Test',
         'symfony/var-dumper/Test',
+        'nunomaduro/pao',
+        'shipfastlabs/agent-detector',
     ];
 
     private const array VENDOR_NOT_NAME = [
