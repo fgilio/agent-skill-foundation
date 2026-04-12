@@ -6,7 +6,6 @@ namespace Fgilio\AgentSkillFoundation\Console;
 
 use Fgilio\AgentSkillFoundation\Build\BoxConfig;
 use Illuminate\Console\Command;
-use RuntimeException;
 
 /**
  * Builds self-contained binary from Laravel Zero project.
@@ -234,60 +233,42 @@ final class BuildCommand extends Command
     }
 
     /**
-     * Remove packages listed in BUILD_EXCLUDED_PACKAGES via composer remove.
+     * Remove packages listed in BUILD_EXCLUDED_PACKAGES from vendor.
      *
-     * Backs up composer.json and composer.lock first so they can be
-     * restored after the build. composer remove is used instead of
-     * simply deleting vendor dirs because it also cleans autoloader
-     * references (autoload_files.php entries would otherwise cause
-     * fatal errors at runtime).
+     * Deletes vendor directories and their transitive-only deps, then
+     * regenerates the autoloader so stale autoload_files entries don't
+     * reference missing files at runtime. Works for both direct and
+     * transitive dependencies (composer remove only handles direct).
      */
     private function stripBuildExcludedPackages(string $projectDir): bool
     {
-        $packages = BoxConfig::BUILD_EXCLUDED_PACKAGES;
-
         $this->info('Stripping build-excluded packages...');
 
-        if (! copy($projectDir.'/composer.json', $projectDir.'/composer.json.build-bak')) {
-            throw new RuntimeException('Failed to backup composer.json');
+        $removed = false;
+
+        foreach (BoxConfig::BUILD_EXCLUDED_PACKAGES as $dir) {
+            $path = $projectDir.'/vendor/'.$dir;
+
+            if (is_dir($path)) {
+                $this->shell('rm -rf '.escapeshellarg($path));
+                $removed = true;
+            }
         }
 
-        if (! copy($projectDir.'/composer.lock', $projectDir.'/composer.lock.build-bak')) {
-            @unlink($projectDir.'/composer.json.build-bak');
-
-            throw new RuntimeException('Failed to backup composer.lock');
+        if ($removed) {
+            $this->shell(sprintf(
+                'cd %s && composer dump-autoload --optimize --no-dev --quiet 2>&1',
+                escapeshellarg($projectDir),
+            ));
         }
 
-        $packageList = implode(' ', array_map('escapeshellarg', $packages));
-
-        [$exitCode] = $this->shell(sprintf(
-            'cd %s && composer remove %s --no-interaction --no-scripts --quiet 2>&1',
-            escapeshellarg($projectDir),
-            $packageList,
-        ));
-
-        if ($exitCode !== 0) {
-            $this->warn('Failed to strip build-excluded packages, continuing');
-            $this->restoreBuildExcludedPackages($projectDir);
-
-            return false;
-        }
-
-        return true;
+        return $removed;
     }
 
     private function restoreBuildExcludedPackages(string $projectDir): void
     {
-        $jsonBak = $projectDir.'/composer.json.build-bak';
-        $lockBak = $projectDir.'/composer.lock.build-bak';
-
-        if (file_exists($jsonBak)) {
-            rename($jsonBak, $projectDir.'/composer.json');
-        }
-
-        if (file_exists($lockBak)) {
-            rename($lockBak, $projectDir.'/composer.lock');
-        }
+        // Restore stripped vendor packages via composer install
+        $this->composerInstall($projectDir, noDev: true);
     }
 
     private function composerInstall(string $dir, bool $noDev): bool

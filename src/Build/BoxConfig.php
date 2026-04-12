@@ -8,9 +8,10 @@ use RuntimeException;
 
 final class BoxConfig
 {
-    /** @var list<string> Packages to strip entirely before building (removed via composer remove). */
+    /** @var list<string> Vendor dirs to strip entirely before building. */
     public const array BUILD_EXCLUDED_PACKAGES = [
         'nunomaduro/pao',
+        'shipfastlabs/agent-detector',
     ];
 
     private const array BASE_DIRS = ['app', 'bootstrap', 'config'];
